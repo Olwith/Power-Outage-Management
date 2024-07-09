@@ -1,0 +1,7 @@
+streamlit
+sqlite3
+pandas
+folium
+streamlit_folium
+base64
+io
