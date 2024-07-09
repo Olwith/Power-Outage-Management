@@ -79,6 +79,15 @@ CREATE TABLE IF NOT EXISTS power_stations (
     station_id TEXT
 )
 ''')
+c.execute('''
+CREATE TABLE IF NOT EXISTS contact_center (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    customer_name TEXT,
+    customer_contact TEXT,
+    message TEXT,
+    response TEXT
+)
+''')
 conn.commit()
 
 # Function to add customer report
@@ -137,6 +146,23 @@ def add_power_station(location, latitude, longitude, station_id):
     ''', (location, latitude, longitude, station_id))
     conn.commit()
 
+# Function to add contact center message
+def add_contact_center_message(customer_name, customer_contact, message):
+    c.execute('''
+    INSERT INTO contact_center (customer_name, customer_contact, message, response)
+    VALUES (?, ?, ?, ?)
+    ''', (customer_name, customer_contact, message, ""))
+    conn.commit()
+
+# Function to respond to contact center message
+def respond_to_message(message_id, response):
+    c.execute('''
+    UPDATE contact_center
+    SET response = ?
+    WHERE id = ?
+    ''', (response, message_id))
+    conn.commit()
+
 # Function to get data
 def get_data(table_name):
     return pd.read_sql_query(f'SELECT * FROM {table_name}', conn)
@@ -191,99 +217,125 @@ def delete_all_data(table_name):
 # Streamlit App
 st.title('KPLC Power Outage Management')
 
-# Customer section
-st.header('Customer Section')
-with st.form(key='customer_form'):
-    name = st.text_input('Name')
-    location = st.text_input('Location')
-    latitude = st.number_input('Latitude', format="%.6f")
-    longitude = st.number_input('Longitude', format="%.6f")
-    outage_report = st.text_area('Outage Report')
-    submit_button = st.form_submit_button(label='Submit Report')
-    if submit_button:
-        add_customer_report(name, location, latitude, longitude, outage_report)
-        st.success('Report submitted successfully')
+# Choose section to fill
+st.sidebar.header('Choose Section to Fill')
+sections = ['Customers', 'KPLC Data', 'Meters', 'Poles', 'Power Lines', 'Transformers', 'Power Stations', 'Contact Center']
+selected_section = st.sidebar.selectbox('Section', sections)
 
-# KPLC section
-st.header('KPLC Section')
-with st.form(key='kplc_form'):
-    location = st.text_input('Location')
-    latitude = st.number_input('Latitude', format="%.6f")
-    longitude = st.number_input('Longitude', format="%.6f")
-    status = st.selectbox('Status', ['Pending', 'Resolved'])
-    resolution_time = st.text_input('Resolution Time')
-    submit_button = st.form_submit_button(label='Submit Data')
-    if submit_button:
-        add_kplc_data(location, latitude, longitude, status, resolution_time)
-        st.success('Data submitted successfully')
+if selected_section == 'Customers':
+    st.header('Customer Section')
+    with st.form(key='customer_form'):
+        name = st.text_input('Name')
+        location = st.text_input('Location')
+        latitude = st.number_input('Latitude', format="%.6f")
+        longitude = st.number_input('Longitude', format="%.6f")
+        outage_report = st.text_area('Outage Report')
+        submit_button = st.form_submit_button(label='Submit Report')
+        if submit_button:
+            add_customer_report(name, location, latitude, longitude, outage_report)
+            st.success('Report submitted successfully')
 
-# Meters section
-st.header('Meters Section')
-with st.form(key='meter_form'):
-    location = st.text_input('Meter Location')
-    latitude = st.number_input('Meter Latitude', format="%.6f")
-    longitude = st.number_input('Meter Longitude', format="%.6f")
-    meter_id = st.text_input('Meter ID')
-    submit_button = st.form_submit_button(label='Submit Meter')
-    if submit_button:
-        add_meter(location, latitude, longitude, meter_id)
-        st.success('Meter submitted successfully')
+elif selected_section == 'KPLC Data':
+    st.header('KPLC Section')
+    with st.form(key='kplc_form'):
+        location = st.text_input('Location')
+        latitude = st.number_input('Latitude', format="%.6f")
+        longitude = st.number_input('Longitude', format="%.6f")
+        status = st.selectbox('Status', ['Pending', 'Resolved'])
+        resolution_time = st.text_input('Resolution Time')
+        submit_button = st.form_submit_button(label='Submit Data')
+        if submit_button:
+            add_kplc_data(location, latitude, longitude, status, resolution_time)
+            st.success('Data submitted successfully')
 
-# Poles section
-st.header('Poles Section')
-with st.form(key='pole_form'):
-    location = st.text_input('Pole Location')
-    latitude = st.number_input('Pole Latitude', format="%.6f")
-    longitude = st.number_input('Pole Longitude', format="%.6f")
-    pole_id = st.text_input('Pole ID')
-    submit_button = st.form_submit_button(label='Submit Pole')
-    if submit_button:
-        add_pole(location, latitude, longitude, pole_id)
-        st.success('Pole submitted successfully')
+elif selected_section == 'Meters':
+    st.header('Meters Section')
+    with st.form(key='meter_form'):
+        location = st.text_input('Meter Location')
+        latitude = st.number_input('Meter Latitude', format="%.6f")
+        longitude = st.number_input('Meter Longitude', format="%.6f")
+        meter_id = st.text_input('Meter ID')
+        submit_button = st.form_submit_button(label='Submit Meter')
+        if submit_button:
+            add_meter(location, latitude, longitude, meter_id)
+            st.success('Meter submitted successfully')
 
-# Power Lines section
-st.header('Power Lines Section')
-with st.form(key='power_line_form'):
-    start_location = st.text_input('Start Location')
-    start_latitude = st.number_input('Start Latitude', format="%.6f")
-    start_longitude = st.number_input('Start Longitude', format="%.6f")
-    end_location = st.text_input('End Location')
-    end_latitude = st.number_input('End Latitude', format="%.6f")
-    end_longitude = st.number_input('End Longitude', format="%.6f")
-    line_id = st.text_input('Line ID')
-    submit_button = st.form_submit_button(label='Submit Power Line')
-    if submit_button:
-        add_power_line(start_location, start_latitude, start_longitude, end_location, end_latitude, end_longitude, line_id)
-        st.success('Power line submitted successfully')
+elif selected_section == 'Poles':
+    st.header('Poles Section')
+    with st.form(key='pole_form'):
+        location = st.text_input('Pole Location')
+        latitude = st.number_input('Pole Latitude', format="%.6f")
+        longitude = st.number_input('Pole Longitude', format="%.6f")
+        pole_id = st.text_input('Pole ID')
+        submit_button = st.form_submit_button(label='Submit Pole')
+        if submit_button:
+            add_pole(location, latitude, longitude,pole_id)
+            st.success('Pole submitted successfully')
 
-# Transformers section
-st.header('Transformers Section')
-with st.form(key='transformer_form'):
-    location = st.text_input('Transformer Location')
-    latitude = st.number_input('Transformer Latitude', format="%.6f")
-    longitude = st.number_input('Transformer Longitude', format="%.6f")
-    transformer_id = st.text_input('Transformer ID')
-    submit_button = st.form_submit_button(label='Submit Transformer')
-    if submit_button:
+elif selected_section == 'Power Lines':
+    st.header('Power Lines Section')
+    with st.form(key='power_line_form'):
+        start_location = st.text_input('Start Location')
+        start_latitude = st.number_input('Start Latitude', format="%.6f")
+        start_longitude = st.number_input('Start Longitude', format="%.6f")
+        end_location = st.text_input('End Location')
+        end_latitude = st.number_input('End Latitude', format="%.6f")
+        end_longitude = st.number_input('End Longitude', format="%.6f")
+        line_id = st.text_input('Line ID')
+        submit_button = st.form_submit_button(label='Submit Power Line')
+        if submit_button:
+            add_power_line(start_location, start_latitude, start_longitude, end_location, end_latitude, end_longitude, line_id)
+            st.success('Power Line submitted successfully')
+
+elif selected_section == 'Transformers':
+    st.header('Transformers Section')
+    with st.form(key='transformer_form'):
+        location = st.text_input('Transformer Location')
+        latitude = st.number_input('Transformer Latitude', format="%.6f")
+        longitude = st.number_input('Transformer Longitude', format="%.6f")
+        transformer_id = st.text_input('Transformer ID')
+        submit_button = st.form_submit_button(label='Submit Transformer')
+        if submit_button:
             add_transformer(location, latitude, longitude, transformer_id)
             st.success('Transformer submitted successfully')
 
-# Power Stations section
-st.header('Power Stations Section')
-with st.form(key='power_station_form'):
-    location = st.text_input('Power Station Location')
-    latitude = st.number_input('Power Station Latitude', format="%.6f")
-    longitude = st.number_input('Power Station Longitude', format="%.6f")
-    station_id = st.text_input('Power Station ID')
-    submit_button = st.form_submit_button(label='Submit Power Station')
-    if submit_button:
-        add_power_station(location, latitude, longitude, station_id)
-        st.success('Power station submitted successfully')
+elif selected_section == 'Power Stations':
+    st.header('Power Stations Section')
+    with st.form(key='power_station_form'):
+        location = st.text_input('Power Station Location')
+        latitude = st.number_input('Power Station Latitude', format="%.6f")
+        longitude = st.number_input('Power Station Longitude', format="%.6f")
+        station_id = st.text_input('Power Station ID')
+        submit_button = st.form_submit_button(label='Submit Power Station')
+        if submit_button:
+            add_power_station(location, latitude, longitude, station_id)
+            st.success('Power station submitted successfully')
+
+elif selected_section == 'Contact Center':
+    st.header('Contact Center Section')
+    st.subheader('Customer Contact')
+    with st.form(key='customer_contact_form'):
+        customer_name = st.text_input('Customer Name')
+        customer_contact = st.text_input('Customer Contact')
+        message = st.text_area('Message')
+        submit_button = st.form_submit_button(label='Submit Message')
+        if submit_button:
+            add_contact_center_message(customer_name, customer_contact, message)
+            st.success('Message submitted successfully')
+
+    st.subheader('KPLC Response')
+    with st.form(key='kplc_response_form'):
+        message_id = st.number_input('Message ID', min_value=1)
+        response = st.text_area('Response')
+        submit_button = st.form_submit_button(label='Submit Response')
+        if submit_button:
+            respond_to_message(message_id, response)
+            st.success('Response submitted successfully')
 
 # Data Display and Download Section
 st.header('Data Display and Download Section')
 
-data_table = st.selectbox('Select the table to display and download:', ['Customers', 'KPLC Data', 'Meters', 'Poles', 'Power Lines', 'Transformers', 'Power Stations'])
+data_table = st.selectbox('Select the table to display and download:', ['Customers', 'KPLC Data', 'Meters', 'Poles', 'Power Lines', 'Transformers', 'Power Stations', 'Contact Center'])
 if data_table:
     table_name = data_table.lower().replace(" ", "_")
     data = get_data(table_name)
@@ -340,7 +392,7 @@ if data_table:
 
 # Delete Section
 st.header('Delete Data Section')
-delete_table = st.selectbox('Select the table to delete data from:', ['Customers', 'KPLC Data', 'Meters', 'Poles', 'Power Lines', 'Transformers', 'Power Stations'])
+delete_table = st.selectbox('Select the table to delete data from:', ['Customers', 'KPLC Data', 'Meters', 'Poles', 'Power Lines', 'Transformers', 'Power Stations', 'Contact Center'])
 if delete_table:
     delete_option = st.selectbox('Delete options:', ['Delete Specific Row', 'Delete All Data'])
     if delete_option == 'Delete Specific Row':
@@ -360,6 +412,8 @@ if delete_table:
                 delete_transformer(row_id)
             elif delete_table == 'Power Stations':
                 delete_power_station(row_id)
+            elif delete_table == 'Contact Center':
+                delete_contact_center_message(row_id)
             st.success('Row deleted successfully.')
     elif delete_option == 'Delete All Data':
         if st.button('Delete All Data'):
@@ -369,7 +423,7 @@ if delete_table:
 st.header('CSV Upload Section')
 uploaded_file = st.file_uploader('Upload CSV File', type=['csv'])
 if uploaded_file:
-    upload_table = st.selectbox('Select the table to upload data to:', ['Customers', 'KPLC Data', 'Meters', 'Poles', 'Power Lines', 'Transformers', 'Power Stations'])
+    upload_table = st.selectbox('Select the table to upload data to:', ['Customers', 'KPLC Data', 'Meters', 'Poles', 'Power Lines', 'Transformers', 'Power Stations', 'Contact Center'])
     if st.button('Upload CSV'):
         handle_csv_upload(uploaded_file, upload_table.lower().replace(" ", "_"))
 
