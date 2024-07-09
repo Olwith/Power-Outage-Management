@@ -2,5 +2,4 @@ streamlit
 pandas
 folium
 streamlit_folium
-base64
-io
+
