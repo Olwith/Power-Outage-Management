@@ -133,7 +133,6 @@ def delete_all_data(table_name):
     conn.commit()
 
 def send_sms(message, recipients):
-    # Replace with actual API call to send SMS
     api_url = "https://uwazi.mobile/api/v1/sms"
     api_key = "your_api_key"  # Replace with your actual API key
     headers = {"Authorization": f"Bearer {api_key}"}
@@ -148,6 +147,34 @@ st.title('KPLC Power Outage Management System')
 selected_section = st.sidebar.selectbox('Select Section', 
                                         ['Customer Section', 'KPLC Section', 'Contact Center', 'Query Tables'])
 
+# Display map
+st.header('Map')
+map_center = [0.4256, 36.7552]  # Center of Kenya
+m = folium.Map(location=map_center, zoom_start=7, tiles='OpenStreetMap', attr='Map data © OpenStreetMap contributors')
+
+# Add Esri basemap
+esri_tile = folium.TileLayer(
+    tiles='https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+    attr='Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
+    name='Esri World Imagery'
+).add_to(m)
+
+# Add layers to the map
+for table in ['meters', 'poles', 'power_lines', 'transformers', 'power_stations']:
+    data = get_data(table)
+    if table == 'power_lines':
+        for _, row in data.iterrows():
+            folium.PolyLine([(row['start_latitude'], row['start_longitude']), (row['end_latitude'], row['end_longitude'])],
+                            color='blue', weight=2.5, opacity=1).add_to(m)
+    else:
+        for _, row in data.iterrows():
+            folium.Marker([row['latitude'], row['longitude']], popup=row['location']).add_to(m)
+
+# Layer control
+folium.LayerControl().add_to(m)
+st_data = st_folium(m, width=700, height=500)
+
+# Main content based on selected section
 if selected_section == 'Customer Section':
     st.header('Customer Section')
     with st.form(key='customer_form'):
@@ -158,16 +185,6 @@ if selected_section == 'Customer Section':
         if submit_button:
             add_customer(name, location, meter_serial_number)
             st.success('Customer submitted successfully')
-
-    st.header('Contact Center')
-    with st.form(key='contact_form'):
-        customer_name = st.text_input('Customer Name')
-        customer_contact = st.text_input('Customer Contact')
-        message = st.text_area('Message')
-        submit_button = st.form_submit_button(label='Submit')
-        if submit_button:
-            add_contact_center_message(customer_name, customer_contact, message)
-            st.success('Message submitted successfully')
 
 elif selected_section == 'KPLC Section':
     sub_section = st.selectbox('Select Sub-Section', ['Meters', 'Poles', 'Power Lines', 'Transformers', 'Power Stations'])
@@ -235,6 +252,7 @@ elif selected_section == 'KPLC Section':
                 add_power_station(location, latitude, longitude, station_id)
                 st.success('Power Station submitted successfully')
 
+elif selected_section == 'Contact Center':
     st.header('Contact Center')
     with st.form(key='contact_form_kplc'):
         customer_name = st.text_input('Customer Name')
@@ -249,7 +267,6 @@ elif selected_section == 'KPLC Section':
                 respond_to_message(customer_name, response)
                 st.success('Response submitted successfully')
 
-elif selected_section == 'Contact Center':
     st.header('Contact Center Messages')
     contact_center_data = get_data('contact_center')
     st.dataframe(contact_center_data)
@@ -263,6 +280,7 @@ elif selected_section == 'Contact Center':
             st.success('Response submitted successfully')
 
 elif selected_section == 'Query Tables':
+    st.header('Query Tables')
     table_to_query = st.selectbox('Select Table to Query', ['customers', 'meters', 'poles', 'power_lines', 'transformers', 'power_stations', 'contact_center'])
     if table_to_query:
         data = get_data(table_to_query)
@@ -272,33 +290,6 @@ elif selected_section == 'Query Tables':
         value_to_filter = st.selectbox('Select Value to Filter', unique_values)
         filtered_data = data[data[column_to_filter] == value_to_filter]
         st.dataframe(filtered_data)
-
-# Map Section
-st.header('Map')
-map_center = [0.4256, 36.7552]  # Center of Kenya
-m = folium.Map(location=map_center, zoom_start=7, tiles='OpenStreetMap', attr='Map data © OpenStreetMap contributors')
-
-# Add Esri basemap
-esri_tile = folium.TileLayer(
-    tiles='https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-    attr='Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
-    name='Esri World Imagery'
-).add_to(m)
-
-# Add layers to the map
-for table in ['meters', 'poles', 'power_lines', 'transformers', 'power_stations']:
-    data = get_data(table)
-    if table == 'power_lines':
-        for _, row in data.iterrows():
-            folium.PolyLine([(row['start_latitude'], row['start_longitude']), (row['end_latitude'], row['end_longitude'])],
-                            color='blue', weight=2.5, opacity=1).add_to(m)
-    else:
-        for _, row in data.iterrows():
-            folium.Marker([row['latitude'], row['longitude']], popup=row['location']).add_to(m)
-
-# Layer control
-folium.LayerControl().add_to(m)
-st_data = st_folium(m, width=700, height=500)
 
 # Display data tables
 st.header('Data Tables')
@@ -319,7 +310,6 @@ table_to_download = st.selectbox('Select Table to Download Data', ['customers', 
 data_to_download = get_data(table_to_download)
 csv = data_to_download.to_csv(index=False)
 st.download_button(label='Download CSV', data=csv, mime='text/csv', file_name=f'{table_to_download}.csv')
-
 
 # Delete data by ID
 st.header('Delete Data by ID')
